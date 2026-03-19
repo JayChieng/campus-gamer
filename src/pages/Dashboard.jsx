@@ -11,15 +11,12 @@ export default function Dashboard() {
   const [user, setUser] = useState(null);
   const [profile, setProfile] = useState(null);
 
-  // selections
   const [selectedGame, setSelectedGame] = useState(GAMES[0]);
   const [skill, setSkill] = useState(LEVELS[1]);
 
-  // UI state
   const [saved, setSaved] = useState(false);
   const [statusMsg, setStatusMsg] = useState("");
 
-  // US-010 states
   const [joinRequested, setJoinRequested] = useState(false);
   const [teamJoined, setTeamJoined] = useState(false);
 
@@ -49,7 +46,6 @@ export default function Dashboard() {
           setStatusMsg("Loaded saved settings ✅");
         }
 
-        // load join team state if exists
         if (data.joinRequested) setJoinRequested(data.joinRequested);
         if (data.teamJoined) setTeamJoined(data.teamJoined);
       }
@@ -58,7 +54,6 @@ export default function Dashboard() {
     return () => unsub();
   }, [navigate]);
 
-  // mark unsaved when changes
   useEffect(() => {
     setSaved(false);
     setStatusMsg("");
@@ -93,7 +88,6 @@ export default function Dashboard() {
     });
   };
 
-  // US-010 FUNCTION
   const handleJoinTeam = async () => {
     if (!user) return;
 
@@ -155,7 +149,9 @@ export default function Dashboard() {
         onChange={(e) => setSelectedGame(e.target.value)}
       >
         {GAMES.map((g) => (
-          <option key={g} value={g}>{g}</option>
+          <option key={g} value={g}>
+            {g}
+          </option>
         ))}
       </select>
 
@@ -166,18 +162,26 @@ export default function Dashboard() {
         onChange={(e) => setSkill(e.target.value)}
       >
         {LEVELS.map((l) => (
-          <option key={l} value={l}>{l}</option>
+          <option key={l} value={l}>
+            {l}
+          </option>
         ))}
       </select>
 
-      <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+      <div
+        style={{
+          display: "flex",
+          gap: 10,
+          alignItems: "center",
+          flexWrap: "wrap",
+        }}
+      >
         <button onClick={onSave}>Save</button>
 
         <button onClick={onFindTeammate} disabled={!saved}>
           Find Teammate
         </button>
 
-        
         <button onClick={handleJoinTeam}>
           Join Team
         </button>
@@ -189,7 +193,6 @@ export default function Dashboard() {
         )}
       </div>
 
-      
       {joinRequested && (
         <div style={{ marginTop: 12, color: "orange", fontWeight: "bold" }}>
           Join Team Request Status: Pending
@@ -198,7 +201,7 @@ export default function Dashboard() {
 
       {teamJoined && (
         <div style={{ marginTop: 12, color: "lightgreen", fontWeight: "bold" }}>
-          You are already in a team
+          You are already in this team
         </div>
       )}
 
