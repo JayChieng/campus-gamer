@@ -93,7 +93,7 @@ export default function Dashboard() {
     });
   };
 
-  //US-010 FUNCTION
+  // US-010 FUNCTION
   const handleJoinTeam = async () => {
     if (!user) return;
 
