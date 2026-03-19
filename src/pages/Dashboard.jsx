@@ -132,12 +132,36 @@ export default function Dashboard() {
     }
   };
 
+  // Find teammate
   const onFindTeammate = () => {
     // only allow after saved
     if (!saved) return;
 
     navigate("/teammates", {
       state: { game: selectedGame, skill },
+    });
+  };
+
+  // Create team
+  const onCreateTeam = () => {
+    if (!saved) return;
+
+    navigate("/create-team", {
+      state: { game: selectedGame, skill },
+    });
+  };
+
+  // join teams
+  const onFindTeam = () => {
+    if (!saved) return;
+
+    navigate("/teams", {
+      state: {
+        game: selectedGame,
+        skill,
+        availableDays,
+        availableTimeSlots,
+      },
     });
   };
 
@@ -159,6 +183,24 @@ export default function Dashboard() {
         </div>
       ) : (
         <div style={{ marginBottom: 12 }}>Loading profile...</div>
+      )}
+
+      {profile?.teamName && (
+        <div
+          style={{
+            marginTop: 16,
+            padding: 16,
+            border: "1px solid #555",
+            borderRadius: 8,
+            background: "#1f1f1f",
+          }}
+        >
+          <h3 style={{ marginTop: 0 }}>My Team</h3>
+          <div><b>Team Name:</b> {profile.teamName}</div>
+          <div><b>Game:</b> {profile.teamGame}</div>
+          <div><b>Description:</b> {profile.teamDescription || "No description"}</div>
+          <div><b>Role:</b> {profile.role}</div>
+        </div>
       )}
 
       <hr />
@@ -267,6 +309,14 @@ export default function Dashboard() {
 
         <button onClick={onFindTeammate} disabled={!saved}>
           Find Teammate
+        </button>
+
+        <button onClick={onCreateTeam} disabled={!saved}>
+          Create Team
+        </button>
+
+        <button onClick={onFindTeam} disabled={!saved}>
+          Join team
         </button>
 
         {statusMsg && (
