@@ -6,6 +6,16 @@ import { useNavigate } from "react-router-dom";
 
 const GAMES = ["Valorant", "League of Legends", "CS2", "FIFA"];
 const LEVELS = ["Beginner", "Intermediate", "Advanced"];
+const DAYS = [
+  "Monday",
+  "Tuesday",
+  "Wednesday",
+  "Thursday",
+  "Friday",
+  "Saturday",
+  "Sunday",
+];
+const TIME_SLOTS = ["Morning", "Afternoon", "Evening"];
 
 export default function Dashboard() {
   const [user, setUser] = useState(null);
@@ -14,6 +24,10 @@ export default function Dashboard() {
   // selections
   const [selectedGame, setSelectedGame] = useState(GAMES[0]);
   const [skill, setSkill] = useState(LEVELS[1]);
+
+  // available time
+  const [availableDays, setAvailableDays] = useState([]);
+  const [availableTimeSlots, setAvailableTimeSlots] = useState([]);
 
   // UI state
   const [saved, setSaved] = useState(false);
@@ -40,25 +54,63 @@ export default function Dashboard() {
         if (data.favoriteGame) setSelectedGame(data.favoriteGame);
         if (data.skillLevel) setSkill(data.skillLevel);
 
+        // Load availability from Firestore
+        if (data.availableDays) setAvailableDays(data.availableDays);
+        if (data.availableTimeSlots) {
+          setAvailableTimeSlots(data.availableTimeSlots);
+        }
+
         // if both exist -> consider saved
-        if (data.favoriteGame && data.skillLevel) {
+        if (
+          data.favoriteGame &&
+          data.skillLevel &&
+          data.availableDays &&
+          data.availableDays.length > 0 &&
+          data.availableTimeSlots &&
+          data.availableTimeSlots.length > 0
+        ) {
           setSaved(true);
-          setStatusMsg("Loaded saved settings ✅");
+          setStatusMsg("Loaded saved settings");
         }
       }
+
     });
 
     return () => unsub();
   }, [navigate]);
 
-  // if user changes dropdown, mark unsaved
-  useEffect(() => {
+
+  // handle day change
+  const handleDayChange = (day) => {
+    setAvailableDays((prev) =>
+      prev.includes(day)
+        ? prev.filter((item) => item !== day)
+        : [...prev, day]
+    );
     setSaved(false);
     setStatusMsg("");
-  }, [selectedGame, skill]);
+  };
+
+  // handle time change
+  const handleTimeSlotChange = (slot) => {
+    setAvailableTimeSlots((prev) =>
+      prev.includes(slot)
+        ? prev.filter((item) => item !== slot)
+        : [...prev, slot]
+    );
+    setSaved(false);
+    setStatusMsg("");
+  };
 
   const onSave = async () => {
     if (!user) return;
+
+    // validation for day and time available
+    if (availableDays.length === 0 || availableTimeSlots.length === 0) {
+      setSaved(false);
+      setStatusMsg("Please select at least one day and one time slot");
+      return;
+    }
 
     try {
       const ref = doc(db, "users", user.uid);
@@ -66,6 +118,8 @@ export default function Dashboard() {
       await updateDoc(ref, {
         favoriteGame: selectedGame,
         skillLevel: skill,
+        availableDays,
+        availableTimeSlots,
         updatedAt: Date.now(),
       });
 
@@ -93,7 +147,7 @@ export default function Dashboard() {
   };
 
   return (
-    <div style={{ padding: 30, maxWidth: 520 }}>
+    <div style={{ padding: 30, maxWidth: 1000 }}>
       <h2>Dashboard</h2>
 
       {profile ? (
@@ -109,31 +163,106 @@ export default function Dashboard() {
 
       <hr />
 
-      <h3>Game Settings</h3>
-
-      <label>Select Game</label>
-      <select
-        style={{ width: "100%", marginBottom: 10 }}
-        value={selectedGame}
-        onChange={(e) => setSelectedGame(e.target.value)}
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "1fr 1fr",
+          gap: 40,
+          alignItems: "start",
+          marginTop: 20,
+        }}
       >
-        {GAMES.map((g) => (
-          <option key={g} value={g}>{g}</option>
-        ))}
-      </select>
+        <div>
+          <h3>Game Settings</h3>
 
-      <label>Skill Level</label>
-      <select
-        style={{ width: "100%", marginBottom: 12 }}
-        value={skill}
-        onChange={(e) => setSkill(e.target.value)}
-      >
-        {LEVELS.map((l) => (
-          <option key={l} value={l}>{l}</option>
-        ))}
-      </select>
+          <label>Select Game</label>
+          <select
+            style={{ width: "100%", marginBottom: 10 }}
+            value={selectedGame}
+            onChange={(e) => {
+              setSelectedGame(e.target.value);
+              setSaved(false);
+              setStatusMsg("");
+            }}
+          >
+            {GAMES.map((g) => (
+              <option key={g} value={g}>{g}</option>
+            ))}
+          </select>
 
-      <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+          <label>Skill Level</label>
+          <select
+            style={{ width: "100%", marginBottom: 12 }}
+            value={skill}
+            onChange={(e) => {
+              setSkill(e.target.value);
+              setSaved(false);
+              setStatusMsg("");
+            }}
+          >
+            {LEVELS.map((l) => (
+              <option key={l} value={l}>{l}</option>
+            ))}
+          </select>
+        </div>
+
+        <div>
+          <h3>Availability</h3>
+
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "1fr 1fr",
+              gap: 24,
+              marginTop: 8,
+            }}
+          >
+            <div>
+              <label style={{ display: "block", marginBottom: 10, fontWeight: "bold" }}>
+                Available Days
+              </label>
+
+              {DAYS.map((day) => (
+                <label
+                  key={day}
+                  style={{ display: "block", marginBottom: 6 }}
+                >
+                  <input
+                    type="checkbox"
+                    checked={availableDays.includes(day)}
+                    onChange={() => handleDayChange(day)}
+                    style={{ marginRight: 8 }}
+                  />
+                  {day}
+                </label>
+              ))}
+            </div>
+
+            <div>
+              <label style={{ display: "block", marginBottom: 10, fontWeight: "bold" }}>
+                Preferred Time Slots
+              </label>
+
+              {TIME_SLOTS.map((slot) => (
+                <label
+                  key={slot}
+                  style={{ display: "block", marginBottom: 6 }}
+                >
+                  <input
+                    type="checkbox"
+                    checked={availableTimeSlots.includes(slot)}
+                    onChange={() => handleTimeSlotChange(slot)}
+                    style={{ marginRight: 8 }}
+                  />
+                  {slot}
+                </label>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style={{ display: "flex", gap: 10, alignItems: "center", marginTop: 20 }}>
         <button onClick={onSave}>Save</button>
 
         <button onClick={onFindTeammate} disabled={!saved}>
@@ -145,6 +274,30 @@ export default function Dashboard() {
             {statusMsg}
           </span>
         )}
+      </div>
+
+      <div
+        style={{
+          marginTop: 20,
+          padding: 16,
+          border: "1px solid #555",
+          borderRadius: 8,
+          background: "#1f1f1f",
+        }}
+      >
+        <h3 style={{ marginTop: 0 }}>Saved Availability</h3>
+
+        <p>
+          <b>Available Days:</b>{" "}
+          {availableDays.length > 0 ? availableDays.join(", ") : "No days selected"}
+        </p>
+
+        <p style={{ marginBottom: 0 }}>
+          <b>Preferred Time Slots:</b>{" "}
+          {availableTimeSlots.length > 0
+            ? availableTimeSlots.join(", ")
+            : "No time slots selected"}
+        </p>
       </div>
 
       <div style={{ marginTop: 14 }}>
