@@ -328,6 +328,19 @@ export default function Dashboard() {
         <button onClick={onViewTournaments} disabled={!saved}>
           View Tournaments
         </button>
+        <button onClick={() => navigate("/notifications")} disabled={!saved}>
+          Notifications
+        </button>
+
+        {/* ONLY show this button if the user is an admin */}
+        {profile?.role === "admin" && (
+          <button 
+            onClick={() => navigate("/admin")} 
+            style={{ backgroundColor: "#d32f2f", color: "white" }}
+          >
+    🛡️      Admin Panel
+          </button>
+        )}
 
         {statusMsg && (
           <span style={{ fontWeight: "bold" }}>
