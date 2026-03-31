@@ -5,6 +5,7 @@ import Dashboard from "./pages/Dashboard";
 import Teammates from "./pages/Teammates";
 import CreateTeam from "./pages/CreateTeam";
 import Teams from "./pages/Teams";
+import Tournaments from "./pages/Tournaments";
 
 export default function App() {
   return (
@@ -16,6 +17,7 @@ export default function App() {
       <Route path="/create-team" element={<CreateTeam />} />
       <Route path="/teammates" element={<Teammates />} />
       <Route path="/teams" element={<Teams />} />
+      <Route path="/tournaments" element={<Tournaments />} />
       <Route path="*" element={<Navigate to="/login" />} />
     </Routes>
   );

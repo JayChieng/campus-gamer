@@ -165,6 +165,13 @@ export default function Dashboard() {
     });
   };
 
+  // view tournaments
+  const onViewTournaments = () => {
+  if (!saved) return;
+
+  navigate("/tournaments");
+};
+
   const logout = async () => {
     await signOut(auth);
     navigate("/login");
@@ -317,6 +324,9 @@ export default function Dashboard() {
 
         <button onClick={onFindTeam} disabled={!saved}>
           Join team
+        </button>
+        <button onClick={onViewTournaments} disabled={!saved}>
+          View Tournaments
         </button>
 
         {statusMsg && (
