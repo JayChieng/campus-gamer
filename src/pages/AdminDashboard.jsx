@@ -14,7 +14,7 @@ export default function AdminDashboard() {
       if (!user) { navigate("/login"); return; }
 
       const userSnap = await getDoc(doc(db, "users", user.uid));
-      if (userSnap.exists() && userSnap.data().role === "admin") {
+      if (userSnap.exists() && userSnap.data().role === "Admin") {
         setIsAdmin(true);
         const uC = await getCountFromServer(collection(db, "users"));
         const tC = await getCountFromServer(collection(db, "teams"));
