@@ -8,6 +8,7 @@ import Teams from "./pages/Teams";
 import Tournaments from "./pages/Tournaments";
 import Notifications from "./pages/Notifications";
 import AdminDashboard from "./pages/AdminDashboard";
+import AdminReports from "./pages/AdminReports";
 
 export default function App() {
   return (
@@ -22,6 +23,7 @@ export default function App() {
       <Route path="/tournaments" element={<Tournaments />} />
       <Route path="/notifications" element={<Notifications />} />
       <Route path="/admin" element={<AdminDashboard />} />
+      <Route path="/admin-reports" element={<AdminReports />} />
       <Route path="*" element={<Navigate to="/login" />} />
 
     </Routes>
