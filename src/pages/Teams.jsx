@@ -1,5 +1,7 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
+import { collection, getDocs } from "firebase/firestore";
+import { db } from "../firebase";
 
 const ALL_GAMES = ["Valorant", "League of Legends", "CS2", "FIFA"];
 const ALL_LEVELS = ["Beginner", "Intermediate", "Advanced"];
@@ -24,23 +26,19 @@ const getUniqueValues = (primaryList, fallbackList, neededCount) => {
   const result = [];
 
   for (const item of primaryList) {
-    if (!result.includes(item)) {
-      result.push(item);
-    }
+    if (!result.includes(item)) result.push(item);
     if (result.length === neededCount) return result;
   }
 
   for (const item of fallbackList) {
-    if (!result.includes(item)) {
-      result.push(item);
-    }
+    if (!result.includes(item)) result.push(item);
     if (result.length === neededCount) return result;
   }
 
   return result;
 };
 
-const buildTeams = (game, skill, availableDays, availableTimeSlots) => {
+const buildMockTeams = (game, skill, availableDays, availableTimeSlots) => {
   const safeDays = getUniqueValues(availableDays, ALL_DAYS, 3);
   const safeTimeSlots = getUniqueValues(availableTimeSlots, ALL_TIME_SLOTS, 3);
 
@@ -87,39 +85,6 @@ const buildTeams = (game, skill, availableDays, availableTimeSlots) => {
       members: 2,
       match: "91% Match",
     },
-    {
-      id: "t4",
-      name: "Weekend Warriors",
-      game,
-      preferredSkill: altSkill2,
-      description: "Focused team for players who want more serious games.",
-      availableDays: [day1, day3],
-      availableTimeSlots: [slot3],
-      members: 5,
-      match: "88% Match",
-    },
-    {
-      id: "t5",
-      name: "Crossfire Crew",
-      game: extraGame1,
-      preferredSkill: altSkill1,
-      description: "A team from another game category.",
-      availableDays: [day1, day2],
-      availableTimeSlots: [slot1],
-      members: 4,
-      match: "82% Match",
-    },
-    {
-      id: "t6",
-      name: "Elite Squad",
-      game: extraGame2,
-      preferredSkill: altSkill2,
-      description: "Competitive group with a different game focus.",
-      availableDays: [day2],
-      availableTimeSlots: [slot2],
-      members: 3,
-      match: "79% Match",
-    },
   ];
 };
 
@@ -135,9 +100,58 @@ export default function Teams() {
 
   const [sentRequests, setSentRequests] = useState({});
   const [statusMsg, setStatusMsg] = useState("");
+  const [dbTeams, setDbTeams] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  const allTeams = useMemo(() => {
-    return buildTeams(
+  useEffect(() => {
+    const loadTeams = async () => {
+      try {
+        const snapshot = await getDocs(collection(db, "teams"));
+
+        const teamsFromDb = snapshot.docs.map((doc) => {
+          const data = doc.data();
+
+          return {
+            id: doc.id,
+            name: String(data.name || "Unnamed Team").trim(),
+            game: String(data.game || selectedGame).trim(),
+            preferredSkill: String(data.skill || selectedSkill).trim(),
+            description: String(
+              data.description || "Team created in Firestore."
+            ).trim(),
+            availableDays: Array.isArray(data.days)
+              ? data.days.map((day) => String(day).trim())
+              : [],
+            availableTimeSlots: Array.isArray(data.timeSlots)
+              ? data.timeSlots.map((slot) => String(slot).trim())
+              : data.time
+              ? [String(data.time).trim()]
+              : [],
+            members: typeof data.members === "number" ? data.members : 0,
+            match: String(data.match || "95% Match").trim(),
+          };
+        });
+
+        setDbTeams(teamsFromDb);
+
+        if (teamsFromDb.length > 0) {
+          setStatusMsg(`Loaded ${teamsFromDb.length} Firestore team(s).`);
+        } else {
+          setStatusMsg("No Firestore teams found. Showing fallback teams.");
+        }
+      } catch (error) {
+        console.error("Error loading teams:", error);
+        setStatusMsg("Could not load Firestore teams. Showing fallback teams.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadTeams();
+  }, [selectedGame, selectedSkill]);
+
+  const fallbackTeams = useMemo(() => {
+    return buildMockTeams(
       selectedGame,
       selectedSkill,
       availableDays,
@@ -145,23 +159,7 @@ export default function Teams() {
     );
   }, [selectedGame, selectedSkill, availableDays, availableTimeSlots]);
 
-  const filteredTeams = useMemo(() => {
-    return allTeams.filter((team) => {
-      const sameGame = team.game === selectedGame;
-
-      const dayMatch =
-        availableDays.length === 0 ||
-        team.availableDays.some((day) => availableDays.includes(day));
-
-      const timeMatch =
-        availableTimeSlots.length === 0 ||
-        team.availableTimeSlots.some((slot) =>
-          availableTimeSlots.includes(slot)
-        );
-
-      return sameGame && dayMatch && timeMatch;
-    });
-  }, [allTeams, selectedGame, availableDays, availableTimeSlots]);
+  const teamsToShow = dbTeams.length > 0 ? dbTeams : fallbackTeams;
 
   const handleRequestJoin = (team) => {
     setSentRequests((prev) => ({
@@ -211,9 +209,21 @@ export default function Teams() {
           Back
         </button>
 
+        {loading && (
+          <div style={{ marginBottom: 18, color: "#d7c8ff", fontWeight: "bold" }}>
+            Loading teams...
+          </div>
+        )}
+
         {statusMsg && (
           <div style={{ marginBottom: 18, color: "#d7c8ff", fontWeight: "bold" }}>
             {statusMsg}
+          </div>
+        )}
+
+        {!loading && teamsToShow.length === 0 && (
+          <div style={{ color: "#d7c8ff", fontWeight: "bold" }}>
+            No teams available.
           </div>
         )}
 
@@ -224,7 +234,7 @@ export default function Teams() {
             gap: 18,
           }}
         >
-          {filteredTeams.map((team) => (
+          {teamsToShow.map((team) => (
             <div
               key={team.id}
               style={{
@@ -266,7 +276,7 @@ export default function Teams() {
               </div>
 
               <p style={{ margin: "0 0 10px 0" }}>
-                {team.game} • {team.preferredSkill}
+                {team.game} - {team.preferredSkill}
               </p>
 
               <p style={{ margin: "0 0 10px 0", lineHeight: 1.5 }}>
@@ -274,11 +284,11 @@ export default function Teams() {
               </p>
 
               <p style={{ margin: "0 0 8px 0" }}>
-                <b>Days:</b> {team.availableDays.join(", ")}
+                <b>Days:</b> {team.availableDays.join(", ") || "Not specified"}
               </p>
 
               <p style={{ margin: "0 0 8px 0" }}>
-                <b>Time:</b> {team.availableTimeSlots.join(", ")}
+                <b>Time:</b> {team.availableTimeSlots.join(", ") || "Not specified"}
               </p>
 
               <p style={{ margin: "0 0 18px 0" }}>
