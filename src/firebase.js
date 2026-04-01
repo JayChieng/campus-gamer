@@ -2,14 +2,13 @@ import { initializeApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 
-// Your web app's Firebase configuration
 const firebaseConfig = {
-  apiKey: "AIzaSyA-rdjxGS6RNCm-Q8UeiUoqyMRj2Co0j2o",
-  authDomain: "campus-gamer-app.firebaseapp.com",
-  projectId: "campus-gamer-app",
-  storageBucket: "campus-gamer-app.firebasestorage.app",
-  messagingSenderId: "798028445759",
-  appId: "1:798028445759:web:af4d434de2b0de79ece08a"
+  apiKey: "AIzaSyD6hV2ZtABDsjHzTwiJFnMa1Z64YOwyOOg",
+  authDomain: "campus-gamer-app-2c890.firebaseapp.com",
+  projectId: "campus-gamer-app-2c890",
+  storageBucket: "campus-gamer-app-2c890.firebasestorage.app",
+  messagingSenderId: "614936356849",
+  appId: "1:614936356849:web:40c2439b7d17c0f501c650",
 };
 
 const app = initializeApp(firebaseConfig);
