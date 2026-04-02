@@ -1,5 +1,7 @@
 import { useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
+import { auth } from "../firebase";
+import { createNotification } from "../notifications";
 
 const ALL_GAMES = ["Valorant", "League of Legends", "CS2", "FIFA"];
 const ALL_LEVELS = ["Beginner", "Intermediate", "Advanced"];
@@ -163,12 +165,35 @@ export default function Teams() {
     });
   }, [allTeams, selectedGame, availableDays, availableTimeSlots]);
 
-  const handleRequestJoin = (team) => {
-    setSentRequests((prev) => ({
-      ...prev,
-      [team.id]: true,
-    }));
-    setStatusMsg(`Request sent to "${team.name}"`);
+  const handleRequestJoin = async (team) => {
+    const user = auth.currentUser;
+
+    if (!user) {
+      navigate("/login");
+      return;
+    }
+
+    try {
+      await createNotification({
+        recipientId: user.uid,
+        type: "team_join_request",
+        message: `Your request to join "${team.name}" was sent.`,
+        meta: {
+          teamId: team.id,
+          teamName: team.name,
+          game: team.game,
+        },
+      });
+
+      setSentRequests((prev) => ({
+        ...prev,
+        [team.id]: true,
+      }));
+      setStatusMsg(`Request sent to "${team.name}"`);
+    } catch (error) {
+      console.error("Failed to send join request notification:", error);
+      setStatusMsg("Could not send your join request right now.");
+    }
   };
 
   const getInitials = (name) => {

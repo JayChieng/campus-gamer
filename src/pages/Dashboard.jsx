@@ -34,6 +34,7 @@ export default function Dashboard() {
   const [statusMsg, setStatusMsg] = useState("");
 
   const navigate = useNavigate();
+  const isAdmin = profile?.role?.trim().toLowerCase() === "admin";
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (u) => {
@@ -333,12 +334,9 @@ export default function Dashboard() {
         </button>
 
         {/* ONLY show this button if the user is an admin */}
-        {profile?.role === "admin" && (
-          <button 
-            onClick={() => navigate("/admin")} 
-            style={{ backgroundColor: "#d32f2f", color: "white" }}
-          >
-    🛡️      Admin Panel
+        {isAdmin && (
+          <button onClick={() => navigate("/admin")}>
+            Admin Panel
           </button>
         )}
 
@@ -379,3 +377,5 @@ export default function Dashboard() {
     </div>
   );
 }
+
+

@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { addDoc, collection, doc, updateDoc } from "firebase/firestore";
 import { auth, db } from "../firebase";
+import { createNotification } from "../notifications";
 
 export default function CreateTeam() {
   const navigate = useNavigate();
@@ -49,6 +50,17 @@ export default function CreateTeam() {
         teamGame: game,
         teamDescription: description.trim(),
         role: "Owner",
+      });
+
+      await createNotification({
+        recipientId: user.uid,
+        type: "team_created",
+        message: `Your team "${teamName.trim()}" was created successfully.`,
+        meta: {
+          teamId: teamRef.id,
+          teamName: teamName.trim(),
+          game,
+        },
       });
 
       alert(`Team "${teamName}" created successfully!`);

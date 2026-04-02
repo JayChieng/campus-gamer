@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { auth, db } from "../firebase";
+import { createNotification } from "../notifications";
 import {
   addDoc,
   collection,
@@ -121,6 +122,18 @@ export default function Tournaments() {
         userId: user.uid,
         userEmail: user.email || "",
         createdAt: Date.now(),
+      });
+
+      await createNotification({
+        recipientId: user.uid,
+        type: "tournament_registration",
+        message: `You registered for "${tournament.title}" on ${tournament.date}.`,
+        meta: {
+          tournamentId: tournament.id,
+          tournamentTitle: tournament.title,
+          game: tournament.game,
+          date: tournament.date,
+        },
       });
 
       setRegisteredMap((prev) => ({
