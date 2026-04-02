@@ -25,6 +25,12 @@ export default function Notifications() {
   }, [user]);
 
   const markAsRead = async (id) => {
+    setNotifications((prev) =>
+      prev.map((item) =>
+        item.id === id ? { ...item, isRead: true } : item
+      )
+    );
+
     const notifyRef = doc(db, "notifications", id);
     await updateDoc(notifyRef, { isRead: true });
   };
@@ -70,28 +76,43 @@ export default function Notifications() {
             notifications.map((n) => (
               <div
                 key={n.id}
-                onClick={() => markAsRead(n.id)}
+                onClick={() => !n.isRead && markAsRead(n.id)}
                 style={{
-                  background: n.isRead ? "#e0e0e0" : "#ffffff", // Light card style
-                  color: "#111",
+                  background: n.isRead ? "#cfcfcf" : "#ffffff",
+                  color: n.isRead ? "#444" : "#111",
                   borderRadius: 16,
                   padding: "20px",
-                  boxShadow: "0 8px 20px rgba(0,0,0,0.25)",
+                  boxShadow: n.isRead
+                    ? "0 4px 10px rgba(0,0,0,0.15)"
+                    : "0 8px 20px rgba(0,0,0,0.25)",
                   cursor: "pointer",
-                  borderLeft: n.isRead ? "none" : "6px solid #6200ea", // Purple highlight for unread
-                  transition: "transform 0.2s ease",
+                  borderLeft: n.isRead ? "6px solid #9e9e9e" : "6px solid #6200ea",
+                  opacity: n.isRead ? 0.78 : 1,
+                  transform: n.isRead ? "scale(0.99)" : "scale(1)",
+                  transition: "all 0.2s ease",
                 }}
               >
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                   <p style={{ 
                     margin: 0, 
                     fontSize: "1.05rem", 
-                    fontWeight: n.isRead ? "normal" : "bold",
+                    fontWeight: n.isRead ? "500" : "bold",
                     lineHeight: 1.4 
                   }}>
                     {n.message}
                   </p>
-                  {!n.isRead && (
+                  {n.isRead ? (
+                    <span style={{ 
+                      background: "#9e9e9e", 
+                      color: "white", 
+                      fontSize: "0.7rem", 
+                      padding: "4px 8px", 
+                      borderRadius: 20,
+                      marginLeft: 10 
+                    }}>
+                      READ
+                    </span>
+                  ) : (
                     <span style={{ 
                       background: "#6200ea", 
                       color: "white", 
@@ -105,7 +126,7 @@ export default function Notifications() {
                   )}
                 </div>
                 
-                <small style={{ color: "#666", display: "block", marginTop: 10, fontWeight: "500" }}>
+                <small style={{ color: n.isRead ? "#555" : "#666", display: "block", marginTop: 10, fontWeight: "500" }}>
                   {n.timestamp?.toDate().toLocaleString()}
                 </small>
               </div>

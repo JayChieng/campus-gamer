@@ -201,6 +201,7 @@ export default function Dashboard() {
             border: "1px solid #555",
             borderRadius: 8,
             background: "#1f1f1f",
+            color: "#f5f5f5",
           }}
         >
           <h3 style={{ marginTop: 0 }}>My Team</h3>
@@ -335,9 +336,14 @@ export default function Dashboard() {
 
         {/* ONLY show this button if the user is an admin */}
         {isAdmin && (
-          <button onClick={() => navigate("/admin")}>
-            Admin Panel
-          </button>
+          <>
+            <button onClick={() => navigate("/admin")}>
+              Admin Dashboard
+            </button>
+            <button onClick={() => navigate("/admin-reports")}>
+              Admin Reports
+            </button>
+          </>
         )}
 
         {statusMsg && (
@@ -354,6 +360,7 @@ export default function Dashboard() {
           border: "1px solid #555",
           borderRadius: 8,
           background: "#1f1f1f",
+          color: "#f5f5f5",
         }}
       >
         <h3 style={{ marginTop: 0 }}>Saved Availability</h3>

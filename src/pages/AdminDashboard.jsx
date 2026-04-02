@@ -196,6 +196,7 @@ export default function AdminDashboard() {
               <button onClick={() => navigate("/dashboard")}>User Dashboard</button>
               <button onClick={() => navigate("/notifications")}>Notifications</button>
               <button onClick={() => navigate("/tournaments")}>Tournaments</button>
+              <button onClick={() => navigate("/admin-reports")}>Reports Review</button>
             </div>
           </div>
         </div>

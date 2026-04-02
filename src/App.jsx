@@ -8,6 +8,8 @@ import Teams from "./pages/Teams";
 import Tournaments from "./pages/Tournaments";
 import Notifications from "./pages/Notifications";
 import AdminDashboard from "./pages/AdminDashboard";
+import AdminReports from "./pages/AdminReports";
+import ProtectedRoute from "./ProtectedRoute";
 
 export default function App() {
   return (
@@ -15,13 +17,79 @@ export default function App() {
       <Route path="/" element={<Navigate to="/login" />} />
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
-      <Route path="/dashboard" element={<Dashboard />} />
-      <Route path="/create-team" element={<CreateTeam />} />
-      <Route path="/teammates" element={<Teammates />} />
-      <Route path="/teams" element={<Teams />} />
-      <Route path="/tournaments" element={<Tournaments />} />
-      <Route path="/notifications" element={<Notifications />} />
-      <Route path="/admin" element={<AdminDashboard />} />
+
+      <Route
+        path="/dashboard"
+        element={
+          <ProtectedRoute>
+            <Dashboard />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/create-team"
+        element={
+          <ProtectedRoute>
+            <CreateTeam />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/teammates"
+        element={
+          <ProtectedRoute>
+            <Teammates />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/teams"
+        element={
+          <ProtectedRoute>
+            <Teams />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/tournaments"
+        element={
+          <ProtectedRoute>
+            <Tournaments />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/notifications"
+        element={
+          <ProtectedRoute>
+            <Notifications />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin"
+        element={
+          <ProtectedRoute>
+            <AdminDashboard />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin-dashboard"
+        element={
+          <ProtectedRoute>
+            <AdminDashboard />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin-reports"
+        element={
+          <ProtectedRoute>
+            <AdminReports />
+          </ProtectedRoute>
+        }
+      />
       <Route path="*" element={<Navigate to="/login" />} />
 
     </Routes>
