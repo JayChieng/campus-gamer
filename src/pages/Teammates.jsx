@@ -1,474 +1,320 @@
-import React, { useEffect, useMemo, useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { auth, db } from "../firebase";
 import {
-  addDoc,
   collection,
   getDocs,
+  addDoc,
   query,
-  serverTimestamp,
   where,
 } from "firebase/firestore";
-import { auth, db } from "../firebase";
-
-const PROGRAMS = [
-  "Computer Science",
-  "Web Development",
-  "Engineering",
-  "Business",
-  "Mathematics",
-  "Psychology",
-  "Nursing",
-  "Cyber Security",
-];
-
-const YEARS = ["Freshman", "Sophomore", "Junior", "Senior"];
-const NAMES = [
-  "ShadowNinja",
-  "ProGamer420",
-  "GamerGirl123",
-  "TeamPlayer",
-  "NoobSlayer",
-  "ChillGamer",
-  "NightOwl",
-  "AceStriker",
-];
-
-const REPORT_REASONS = [
-  "Toxic behavior",
-  "Spam",
-  "Harassment",
-  "Cheating",
-  "Other",
-];
-
-function pickRandom(arr) {
-  return arr[Math.floor(Math.random() * arr.length)];
-}
-
-function initials(name) {
-  return name.substring(0, 2).toUpperCase();
-}
-
-function buildPlayers(game, skill) {
-  return Array.from({ length: 6 }).map((_, i) => {
-    const name = NAMES[i] || `Gamer${i + 1}`;
-    return {
-      id: i + 1,
-      name,
-      initials: initials(name),
-      match: 98 - i * 3,
-      game,
-      skill,
-      program: pickRandom(PROGRAMS),
-      year: pickRandom(YEARS),
-    };
-  });
-}
 
 export default function Teammates() {
   const navigate = useNavigate();
-  const location = useLocation();
 
-  const state = location.state || {};
-  const game = state.game || "Valorant";
-  const skill = state.skill || "Intermediate";
+  const [users, setUsers] = useState([]);
+  const [blockedIds, setBlockedIds] = useState([]);
+  const [reportingUser, setReportingUser] = useState(null);
+  const [reason, setReason] = useState("");
+  const [explanation, setExplanation] = useState("");
+  const [loading, setLoading] = useState(true);
 
-  const [currentUserId, setCurrentUserId] = useState("current-user");
-  const [sentRequests, setSentRequests] = useState([]);
-  const [blockedUsers, setBlockedUsers] = useState([]);
-  const [removedUsers, setRemovedUsers] = useState([]);
-  const [reportTarget, setReportTarget] = useState(null);
-  const [reportReason, setReportReason] = useState("");
-  const [reportExplanation, setReportExplanation] = useState("");
-  const [reportError, setReportError] = useState("");
-  const [statusMsg, setStatusMsg] = useState("");
+  const currentUser = auth.currentUser;
+
+  const loadUsers = async () => {
+    const snap = await getDocs(collection(db, "users"));
+    const allUsers = snap.docs.map((d) => ({
+      id: d.id,
+      ...d.data(),
+    }));
+
+    const filtered = allUsers.filter((u) => u.id !== currentUser?.uid);
+    setUsers(filtered);
+  };
+
+  const loadBlockedUsers = async () => {
+    if (!currentUser) return;
+
+    const q = query(
+      collection(db, "blocks"),
+      where("blockerId", "==", currentUser.uid)
+    );
+
+    const snap = await getDocs(q);
+    const ids = snap.docs.map((d) => d.data().blockedId);
+    setBlockedIds(ids);
+  };
 
   useEffect(() => {
-    if (auth.currentUser?.uid) {
-      setCurrentUserId(auth.currentUser.uid);
-    }
-  }, []);
-
-  useEffect(() => {
-    const loadBlockedUsers = async () => {
-      if (!currentUserId) return;
-
+    const loadData = async () => {
       try {
-        const blocksRef = collection(db, "blocks");
-        const q = query(blocksRef, where("blockerId", "==", currentUserId));
-        const snapshot = await getDocs(q);
-
-        const blockedIds = snapshot.docs.map((doc) => doc.data().blockedId);
-        setBlockedUsers(blockedIds);
+        if (!currentUser) return;
+        await loadUsers();
+        await loadBlockedUsers();
       } catch (error) {
-        console.error("Error loading blocked users:", error);
+        console.error("Error loading teammates:", error);
+      } finally {
+        setLoading(false);
       }
     };
 
-    loadBlockedUsers();
-  }, [currentUserId]);
+    loadData();
+  }, [currentUser]);
 
-  const players = useMemo(() => buildPlayers(game, skill), [game, skill]);
+  const handleBlock = async (user) => {
+    if (!currentUser) return;
 
-  const visiblePlayers = players.filter(
-    (p) => !blockedUsers.includes(p.id) && !removedUsers.includes(p.id)
-  );
-
-  const handleConnect = (playerId) => {
-    if (String(playerId) === String(currentUserId)) {
-      setStatusMsg("You cannot send a request to yourself.");
+    if (user.id === currentUser.uid) {
+      alert("You cannot block yourself.");
       return;
     }
 
-    if (blockedUsers.includes(playerId)) {
-      setStatusMsg("Blocked users cannot send new requests.");
-      return;
-    }
-
-    if (sentRequests.includes(playerId)) {
-      setStatusMsg("Request already sent.");
-      return;
-    }
-
-    setSentRequests((prev) => [...prev, playerId]);
-    setStatusMsg("Friend request sent!");
-  };
-
-  const handleBlock = async (playerId) => {
-    if (String(playerId) === String(currentUserId)) {
-      setStatusMsg("You cannot block yourself.");
-      return;
-    }
-
-    if (blockedUsers.includes(playerId)) {
-      setStatusMsg("User is already blocked.");
+    if (blockedIds.includes(user.id)) {
+      alert("User already blocked.");
       return;
     }
 
     try {
       await addDoc(collection(db, "blocks"), {
-        blockerId: currentUserId,
-        blockedId: playerId,
-        createdAt: serverTimestamp(),
+        blockerId: currentUser.uid,
+        blockedId: user.id,
+        blockerEmail: currentUser.email,
+        blockedEmail: user.email || "",
+        createdAt: Date.now(),
       });
 
-      setBlockedUsers((prev) => [...prev, playerId]);
-      setSentRequests((prev) => prev.filter((id) => id !== playerId));
-      setStatusMsg("User blocked successfully.");
+      setBlockedIds((prev) => [...prev, user.id]);
+      setUsers((prev) => prev.filter((u) => u.id !== user.id));
+      alert("User blocked successfully.");
     } catch (error) {
       console.error("Error blocking user:", error);
-      setStatusMsg("Error blocking user.");
+      alert("Failed to block user.");
     }
   };
 
-  const handleRemove = (playerId) => {
-    if (String(playerId) === String(currentUserId)) {
-      setStatusMsg("You cannot remove yourself.");
+  const handleRemove = (user) => {
+    if (!currentUser) return;
+
+    if (user.id === currentUser.uid) {
+      alert("You cannot remove yourself.");
       return;
     }
 
-    setRemovedUsers((prev) =>
-      prev.includes(playerId) ? prev : [...prev, playerId]
-    );
-    setSentRequests((prev) => prev.filter((id) => id !== playerId));
-    setStatusMsg("User removed successfully.");
-  };
-
-  const openReportModal = (playerId) => {
-    setReportTarget(playerId);
-    setReportReason("");
-    setReportExplanation("");
-    setReportError("");
-    setStatusMsg("");
+    setUsers((prev) => prev.filter((u) => u.id !== user.id));
+    alert("User removed from the list.");
   };
 
   const closeReportModal = () => {
-    setReportTarget(null);
-    setReportReason("");
-    setReportExplanation("");
-    setReportError("");
+    setReportingUser(null);
+    setReason("");
+    setExplanation("");
   };
 
-  const handleSubmitReport = async () => {
-    if (!reportTarget) return;
+  const submitReport = async () => {
+    if (!currentUser || !reportingUser) return;
 
-    if (!reportReason) {
-      setReportError("Please select a report reason.");
+    if (!reason.trim()) {
+      alert("Please select a reason before submitting.");
       return;
     }
 
     try {
       await addDoc(collection(db, "reports"), {
-        reporterId: currentUserId,
-        reportedUserId: reportTarget,
-        reason: reportReason,
-        explanation: reportExplanation.trim(),
-        createdAt: serverTimestamp(),
+        reporterId: currentUser.uid,
+        reporterEmail: currentUser.email,
+        reportedId: reportingUser.id,
+        reportedEmail: reportingUser.email || "",
+        reportedDisplayName: reportingUser.displayName || "No name",
+        reason,
+        explanation: explanation.trim(),
+        createdAt: Date.now(),
+        status: "open",
       });
 
-      setReportError("");
-      setStatusMsg("Report submitted successfully.");
+      alert("Report submitted successfully.");
+
+      setUsers((prev) => prev.filter((u) => u.id !== reportingUser.id));
+
       closeReportModal();
     } catch (error) {
       console.error("Error submitting report:", error);
-      setReportError("");
-      setStatusMsg("Error submitting report.");
+      alert("Failed to submit report.");
     }
   };
 
+  const buttonStyle = {
+    border: "none",
+    borderRadius: 8,
+    padding: "8px 14px",
+    fontWeight: "bold",
+    cursor: "pointer",
+  };
+
+  if (loading) {
+    return <div style={{ padding: 30, color: "white" }}>Loading teammates...</div>;
+  }
+
   return (
-    <div style={{ padding: 30, maxWidth: 1000, margin: "0 auto" }}>
-      <h2 style={{ marginBottom: 6 }}>Recommended Teammates</h2>
-      <div style={{ color: "#999", marginBottom: 20 }}>
-        Players matched based on your game and skill level
+    <div style={{ padding: 30, color: "white" }}>
+      <div style={{ marginBottom: 20 }}>
+        <button
+          onClick={() => navigate("/dashboard")}
+          style={{
+            ...buttonStyle,
+            backgroundColor: "#2196f3",
+            color: "white",
+          }}
+        >
+          Back to Dashboard
+        </button>
       </div>
 
-      <button
-        style={{
-          padding: "8px 12px",
-          marginBottom: 20,
-          borderRadius: 6,
-          border: "1px solid #ccc",
-          cursor: "pointer",
-          background: "transparent",
-          color: "white",
-        }}
-        onClick={() => navigate("/dashboard")}
-      >
-        Back
-      </button>
+      <h1>Teammates</h1>
 
-      {statusMsg && (
-        <div style={{ marginBottom: 18, color: "#d7c8ff", fontWeight: "bold" }}>
-          {statusMsg}
-        </div>
+      {users.length === 0 ? (
+        <p>No teammates available.</p>
+      ) : (
+        users.map((user) => (
+          <div
+            key={user.id}
+            style={{
+              border: "1px solid #444",
+              borderRadius: 10,
+              padding: 16,
+              marginBottom: 16,
+              backgroundColor: "#1a1a1a",
+            }}
+          >
+            <p><b>Name:</b> {user.displayName || "No name"}</p>
+            <p><b>Email:</b> {user.email || "No email"}</p>
+            <p><b>Program:</b> {user.program || "Not set"}</p>
+            <p><b>Year:</b> {user.year || "Not set"}</p>
+
+            <div style={{ marginTop: 12 }}>
+              <button
+                onClick={() => handleBlock(user)}
+                style={{
+                  ...buttonStyle,
+                  backgroundColor: "#e53935",
+                  color: "white",
+                }}
+              >
+                Block
+              </button>
+
+              <button
+                onClick={() => handleRemove(user)}
+                style={{
+                  ...buttonStyle,
+                  backgroundColor: "#fb8c00",
+                  color: "white",
+                  marginLeft: 10,
+                }}
+              >
+                Remove
+              </button>
+
+              <button
+                onClick={() => setReportingUser(user)}
+                style={{
+                  ...buttonStyle,
+                  backgroundColor: "#8e24aa",
+                  color: "white",
+                  marginLeft: 10,
+                }}
+              >
+                Report
+              </button>
+            </div>
+          </div>
+        ))
       )}
 
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(2, minmax(260px, 1fr))",
-          gap: 20,
-        }}
-      >
-        {visiblePlayers.map((p) => {
-          const isPending = sentRequests.includes(p.id);
-
-          return (
-            <div
-              key={p.id}
-              style={{
-                background: "white",
-                color: "#111",
-                borderRadius: 14,
-                padding: 20,
-                boxShadow: "0 5px 15px rgba(0,0,0,0.15)",
-                display: "flex",
-                flexDirection: "column",
-                justifyContent: "space-between",
-              }}
-            >
-              <div>
-                <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
-                  <div
-                    style={{
-                      width: 45,
-                      height: 45,
-                      borderRadius: "50%",
-                      background: "#c7b8ff",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      fontWeight: "bold",
-                    }}
-                  >
-                    {p.initials}
-                  </div>
-                  <div>
-                    <div style={{ fontSize: 18, fontWeight: "bold" }}>
-                      {p.name}
-                    </div>
-                    <div style={{ fontSize: 13, color: "#666" }}>
-                      {p.match}% Match
-                    </div>
-                  </div>
-                </div>
-
-                <div style={{ marginTop: 14, color: "#333" }}>
-                  <div>{p.program} - {p.year}</div>
-                  <div style={{ marginTop: 6 }}>{p.game} - {p.skill}</div>
-                </div>
-              </div>
-
-              <div style={{ marginTop: 18 }}>
-                <button
-                  disabled={isPending}
-                  style={{
-                    width: "100%",
-                    padding: 10,
-                    borderRadius: 10,
-                    border: "none",
-                    background: isPending ? "#ccc" : "black",
-                    color: isPending ? "#666" : "white",
-                    cursor: isPending ? "not-allowed" : "pointer",
-                    fontWeight: "bold",
-                  }}
-                  onClick={() => handleConnect(p.id)}
-                >
-                  {isPending ? "Pending" : "Connect"}
-                </button>
-
-                <button
-                  style={{
-                    marginTop: 8,
-                    width: "100%",
-                    padding: 10,
-                    borderRadius: 10,
-                    border: "1px solid #b91c1c",
-                    background: "white",
-                    color: "#b91c1c",
-                    cursor: "pointer",
-                    fontWeight: "bold",
-                  }}
-                  onClick={() => handleBlock(p.id)}
-                >
-                  Block User
-                </button>
-
-                <button
-                  style={{
-                    marginTop: 8,
-                    width: "100%",
-                    padding: 10,
-                    borderRadius: 10,
-                    border: "1px solid #444",
-                    background: "white",
-                    color: "#111",
-                    cursor: "pointer",
-                    fontWeight: "bold",
-                  }}
-                  onClick={() => handleRemove(p.id)}
-                >
-                  Remove User
-                </button>
-
-                <button
-                  style={{
-                    marginTop: 8,
-                    width: "100%",
-                    padding: 10,
-                    borderRadius: 10,
-                    border: "1px solid #d97706",
-                    background: "white",
-                    color: "#d97706",
-                    cursor: "pointer",
-                    fontWeight: "bold",
-                  }}
-                  onClick={() => openReportModal(p.id)}
-                >
-                  Report User
-                </button>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-
-      {reportTarget !== null && (
+      {reportingUser && (
         <div
           style={{
             position: "fixed",
             inset: 0,
-            background: "rgba(0,0,0,0.55)",
+            backgroundColor: "rgba(0, 0, 0, 0.7)",
             display: "flex",
-            justifyContent: "center",
             alignItems: "center",
-            padding: 20,
+            justifyContent: "center",
+            zIndex: 1000,
           }}
         >
           <div
             style={{
-              background: "white",
-              color: "#111",
-              width: "100%",
+              backgroundColor: "#1f1f1f",
+              color: "white",
+              padding: 24,
+              borderRadius: 12,
+              width: "90%",
               maxWidth: 500,
-              borderRadius: 14,
-              padding: 22,
-              boxShadow: "0 10px 25px rgba(0,0,0,0.25)",
+              boxShadow: "0 0 20px rgba(0,0,0,0.4)",
             }}
           >
             <h3 style={{ marginTop: 0 }}>Report User</h3>
 
-            <label style={{ display: "block", marginBottom: 8, fontWeight: "bold" }}>
-              Reason
-            </label>
+            <p>
+              Reporting:{" "}
+              <b>{reportingUser.displayName || reportingUser.email || "Unknown user"}</b>
+            </p>
+
+            <label><b>Reason</b></label>
             <select
-              value={reportReason}
-              onChange={(e) => setReportReason(e.target.value)}
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
               style={{
                 width: "100%",
+                marginTop: 6,
+                marginBottom: 12,
                 padding: 10,
                 borderRadius: 8,
-                marginBottom: 14,
               }}
             >
               <option value="">Select a reason</option>
-              {REPORT_REASONS.map((reason) => (
-                <option key={reason} value={reason}>
-                  {reason}
-                </option>
-              ))}
+              <option value="Toxic behavior">Toxic behavior</option>
+              <option value="Harassment">Harassment</option>
+              <option value="Spam">Spam</option>
+              <option value="Offensive language">Offensive language</option>
+              <option value="Cheating">Cheating</option>
+              <option value="Other">Other</option>
             </select>
 
-            <label style={{ display: "block", marginBottom: 8, fontWeight: "bold" }}>
-              Explanation (optional)
-            </label>
+            <label><b>Optional Explanation</b></label>
             <textarea
-              value={reportExplanation}
-              onChange={(e) => setReportExplanation(e.target.value)}
               placeholder="Add extra details if needed"
-              rows={5}
+              value={explanation}
+              onChange={(e) => setExplanation(e.target.value)}
               style={{
                 width: "100%",
+                minHeight: 100,
+                marginTop: 6,
+                marginBottom: 14,
                 padding: 10,
                 borderRadius: 8,
                 resize: "vertical",
-                marginBottom: 16,
               }}
             />
 
-            {reportError && (
-              <div style={{ color: "#b91c1c", fontWeight: "bold", marginBottom: 12 }}>
-                {reportError}
-              </div>
-            )}
-
-            <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
               <button
                 onClick={closeReportModal}
                 style={{
-                  padding: "10px 14px",
-                  borderRadius: 8,
-                  border: "1px solid #ccc",
-                  background: "white",
-                  color: "#111",
-                  cursor: "pointer",
-                  fontWeight: "bold",
+                  ...buttonStyle,
+                  backgroundColor: "#757575",
+                  color: "white",
                 }}
               >
                 Cancel
               </button>
 
               <button
-                onClick={handleSubmitReport}
+                onClick={submitReport}
                 style={{
-                  padding: "10px 14px",
-                  borderRadius: 8,
-                  border: "none",
-                  background: "black",
+                  ...buttonStyle,
+                  backgroundColor: "#8e24aa",
                   color: "white",
-                  cursor: "pointer",
-                  fontWeight: "bold",
                 }}
               >
                 Submit Report
