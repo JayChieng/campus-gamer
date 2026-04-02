@@ -7,6 +7,7 @@ import CreateTeam from "./pages/CreateTeam";
 import Teams from "./pages/Teams";
 import Tournaments from "./pages/Tournaments";
 import AdminReports from "./pages/AdminReports";
+import ProtectedRoute from "./ProtectedRoute";
 
 export default function App() {
   return (
@@ -14,12 +15,61 @@ export default function App() {
       <Route path="/" element={<Navigate to="/login" />} />
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
-      <Route path="/dashboard" element={<Dashboard />} />
-      <Route path="/create-team" element={<CreateTeam />} />
-      <Route path="/teammates" element={<Teammates />} />
-      <Route path="/teams" element={<Teams />} />
-      <Route path="/tournaments" element={<Tournaments />} />
-      <Route path="/admin-reports" element={<AdminReports />} />
+
+      <Route
+        path="/dashboard"
+        element={
+          <ProtectedRoute>
+            <Dashboard />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/create-team"
+        element={
+          <ProtectedRoute>
+            <CreateTeam />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/teammates"
+        element={
+          <ProtectedRoute>
+            <Teammates />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/teams"
+        element={
+          <ProtectedRoute>
+            <Teams />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/tournaments"
+        element={
+          <ProtectedRoute>
+            <Tournaments />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/admin-reports"
+        element={
+          <ProtectedRoute>
+            <AdminReports />
+          </ProtectedRoute>
+        }
+      />
+
       <Route path="*" element={<Navigate to="/login" />} />
     </Routes>
   );
